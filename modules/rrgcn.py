@@ -8,7 +8,7 @@ import math
 
 from modules.rgcn_layers import UnionRGCNLayer, RGCNBlockLayer
 from modules.rgcn_model import BaseRGCN
-from modules.decoder import ConvTransE
+from modules.decoder import ConvTransE, ConvTransR
 import numpy as np
 class RGCNCell(BaseRGCN):
     def build_hidden_layer(self, idx):
@@ -66,6 +66,7 @@ class RecurrentRGCNCEN(nn.Module):
         self.layer_norm = layer_norm
         self.h = None
         self.relation_prediction = relation_prediction
+        print('relation_prediction: {}'.format(self.relation_prediction))
         self.entity_prediction = entity_prediction
         self.gpu = gpu
 
@@ -288,7 +289,7 @@ class RecurrentRGCNREGCN(nn.Module):
         # decoder
         if decoder_name == "convtranse":
             self.decoder_ob = ConvTransE(num_ents, h_dim, input_dropout, hidden_dropout, feat_dropout)
-            # self.rdecoder = ConvTransR(num_rels, h_dim, input_dropout, hidden_dropout, feat_dropout)
+            self.rdecoder = ConvTransR(num_rels, h_dim, input_dropout, hidden_dropout, feat_dropout)
         else:
             raise NotImplementedError 
 
@@ -368,7 +369,7 @@ class RecurrentRGCNREGCN(nn.Module):
                     hits_list.append(prediction_perf['hits@10'])
             else:
                 score = self.decoder_ob.forward(embedding, r_emb, all_triples, mode="test")
-            # score_rel = self.rdecoder.forward(embedding, r_emb, all_triples, mode="test")
+                score_rel = self.rdecoder.forward(embedding, r_emb, all_triples, mode="test")
             return score, perf_list, hits_list
         
     def get_mask_nonzero(self, static_embedding):
@@ -402,6 +403,9 @@ class RecurrentRGCNREGCN(nn.Module):
             scores_ob = self.decoder_ob.forward(pre_emb, r_emb, all_triples).view(-1, self.num_ents)
             loss_ent += self.loss_e(scores_ob, all_triples[:, 2])
      
+        if self.relation_prediction:
+            score_rel = self.rdecoder.forward(pre_emb, r_emb, all_triples, mode="train").view(-1, 2 * self.num_rels)
+            loss_rel += self.loss_r(score_rel, all_triples[:, 1])
 
         if self.use_static:
             if self.discount == 1:
