@@ -72,7 +72,7 @@ class ConvTransE(torch.nn.Module):
 
         self.fc = torch.nn.Linear(embedding_dim * channels, embedding_dim)
 
-    def forward(self, embedding, emb_rel, triplets, partial_embeding=None, samples_of_interest_emb=None):
+    def forward(self, embedding, emb_rel, triplets, partial_embeding=None, samples_of_interest_emb=None, batch_size_total=None):
         """ forward for ConvsTransE decoder that computes scores for given triples of question
         return: score_list: list of scores for each triple in the batch
         """
@@ -81,21 +81,23 @@ class ConvTransE(torch.nn.Module):
         if self.model_name == 'CEN': #CEN
             for idx in range(len(embedding)): # leng of test_graph
                 if samples_of_interest_emb != None:
-                    x= self.forward_inner(embedding[idx], emb_rel, triplets, idx, partial_embeding, samples_of_interest_emb[idx])     
+                    x= self.forward_inner(embedding[idx], emb_rel, triplets, idx, partial_embeding, samples_of_interest_emb[idx], batch_size_total)     
                 else:
-                    x= self.forward_inner(embedding[idx], emb_rel, triplets, idx, partial_embeding, samples_of_interest_emb)
+                    x= self.forward_inner(embedding[idx], emb_rel, triplets, idx, partial_embeding, samples_of_interest_emb, batch_size_total)
                 score_list.append(x)
             return score_list
         else: #RE-GCN
-            scores = self.forward_inner(embedding, emb_rel, triplets, 0, partial_embeding, samples_of_interest_emb)
+            scores = self.forward_inner(embedding, emb_rel, triplets, 0, partial_embeding, samples_of_interest_emb, batch_size_total)
             return scores 
 
 
 
-    def forward_inner(self, embedding, emb_rel, triplets, idx=0, partial_embeding=None, samples_of_interest_emb=None):
+    def forward_inner(self, embedding, emb_rel, triplets, idx=0, partial_embeding=None, samples_of_interest_emb=None, batch_size_total=None):
         """ forward for ConvsTransE decoder that computes scores for given triples of question for each graph in the history of test graphs
         return: x: list of scores for each triple in the batch
         """
+        if batch_size_total == None:
+            batch_size_total = len(triplets)
         batch_size = len(triplets)
         e1_embedded_all = F.tanh(embedding)
         e1_embedded = e1_embedded_all[triplets[:, 0]].unsqueeze(1)
@@ -110,7 +112,7 @@ class ConvTransE(torch.nn.Module):
         x = x.view(batch_size, -1)
         x = self.fc(x)
         x = self.hidden_drop(x)
-        if batch_size > 1:
+        if batch_size_total > 1:
             x = self.bn2_list[idx](x)
         x = F.relu(x)
         if partial_embeding !=None:

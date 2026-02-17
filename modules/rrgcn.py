@@ -132,16 +132,18 @@ class RecurrentRGCNCEN(nn.Module):
             if neg_samples_batch != None: # added by tgb team
                 perf_list = []
                 hits_list = []
+                batch_size_total = len(neg_samples_batch)
                 for query_id, query in enumerate(neg_samples_batch): # for each sample separately
                     pos = pos_samples_batch[query_id]
                     neg = torch.tensor(query).to(pos.device)
                     all =torch.cat((pos.unsqueeze(0), neg), dim=0)
                     score_list = self.decoder_ob.forward(evolve_embeddings, r_emb, test_triplets[query_id].unsqueeze(0),
-                            samples_of_interest_emb= [evolve_embeddings[i][all] for i in range(len(evolve_embeddings))])
+                            samples_of_interest_emb= [evolve_embeddings[i][all] for i in range(len(evolve_embeddings))], batch_size_total=batch_size_total )
                     score_list = [_.unsqueeze(2) for _ in score_list]
                     scores_b = torch.cat(score_list, dim=2)
                     scores_b = torch.softmax(scores_b, dim=1)
                     scores_b = torch.sum(scores_b, dim=-1)
+
                     # compute MRR
                     input_dict = {
                         "y_pred_pos": np.array([scores_b[0,0].cpu()]),
@@ -153,7 +155,7 @@ class RecurrentRGCNCEN(nn.Module):
                     hits_list.append(prediction_perf['hits@10'])
 
             else:
-                score_list = self.decoder_ob.forward(evolve_embeddings, r_emb, test_triplets, mode="test")
+                score_list = self.decoder_ob.forward(evolve_embeddings, r_emb, test_triplets, mode="test", batch_size_total=len(test_triplets))
 
                 score_list = [_.unsqueeze(2) for _ in score_list]
                 scores = torch.cat(score_list, dim=2)
@@ -347,12 +349,14 @@ class RecurrentRGCNREGCN(nn.Module):
             if neg_samples_batch != None: # added by tgb team
                 perf_list = []
                 hits_list = []
+                batch_size_total = len(neg_samples_batch)
                 for query_id, query in enumerate(neg_samples_batch): # for each sample separately
                     pos = pos_samples_batch[query_id]
                     neg = torch.tensor(query).to(pos.device)
                     all =torch.cat((pos.unsqueeze(0), neg), dim=0)
                     score = self.decoder_ob.forward(embedding, r_emb, test_triplets[query_id].unsqueeze(0),
-                            samples_of_interest_emb=embedding[all] )
+                            samples_of_interest_emb=embedding[all], batch_size_total=batch_size_total )
+
                     # compute MRR
                     input_dict = {
                         "y_pred_pos": np.array([score[0,0].cpu()]),
