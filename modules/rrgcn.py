@@ -8,7 +8,7 @@ import math
 
 from modules.rgcn_layers import UnionRGCNLayer, RGCNBlockLayer
 from modules.rgcn_model import BaseRGCN
-from modules.decoder import ConvTransE
+from modules.decoder import ConvTransE, ConvTransR
 import numpy as np
 class RGCNCell(BaseRGCN):
     def build_hidden_layer(self, idx):
@@ -66,6 +66,7 @@ class RecurrentRGCNCEN(nn.Module):
         self.layer_norm = layer_norm
         self.h = None
         self.relation_prediction = relation_prediction
+        print('relation_prediction: {}'.format(self.relation_prediction))
         self.entity_prediction = entity_prediction
         self.gpu = gpu
 
@@ -132,16 +133,18 @@ class RecurrentRGCNCEN(nn.Module):
             if neg_samples_batch != None: # added by tgb team
                 perf_list = []
                 hits_list = []
+                batch_size_total = len(neg_samples_batch)
                 for query_id, query in enumerate(neg_samples_batch): # for each sample separately
                     pos = pos_samples_batch[query_id]
                     neg = torch.tensor(query).to(pos.device)
                     all =torch.cat((pos.unsqueeze(0), neg), dim=0)
                     score_list = self.decoder_ob.forward(evolve_embeddings, r_emb, test_triplets[query_id].unsqueeze(0),
-                            samples_of_interest_emb= [evolve_embeddings[i][all] for i in range(len(evolve_embeddings))])
+                            samples_of_interest_emb= [evolve_embeddings[i][all] for i in range(len(evolve_embeddings))], batch_size_total=batch_size_total )
                     score_list = [_.unsqueeze(2) for _ in score_list]
                     scores_b = torch.cat(score_list, dim=2)
                     scores_b = torch.softmax(scores_b, dim=1)
                     scores_b = torch.sum(scores_b, dim=-1)
+
                     # compute MRR
                     input_dict = {
                         "y_pred_pos": np.array([scores_b[0,0].cpu()]),
@@ -153,7 +156,7 @@ class RecurrentRGCNCEN(nn.Module):
                     hits_list.append(prediction_perf['hits@10'])
 
             else:
-                score_list = self.decoder_ob.forward(evolve_embeddings, r_emb, test_triplets, mode="test")
+                score_list = self.decoder_ob.forward(evolve_embeddings, r_emb, test_triplets, mode="test", batch_size_total=len(test_triplets))
 
                 score_list = [_.unsqueeze(2) for _ in score_list]
                 scores = torch.cat(score_list, dim=2)
@@ -286,7 +289,7 @@ class RecurrentRGCNREGCN(nn.Module):
         # decoder
         if decoder_name == "convtranse":
             self.decoder_ob = ConvTransE(num_ents, h_dim, input_dropout, hidden_dropout, feat_dropout)
-            # self.rdecoder = ConvTransR(num_rels, h_dim, input_dropout, hidden_dropout, feat_dropout)
+            self.rdecoder = ConvTransR(num_rels, h_dim, input_dropout, hidden_dropout, feat_dropout)
         else:
             raise NotImplementedError 
 
@@ -347,12 +350,14 @@ class RecurrentRGCNREGCN(nn.Module):
             if neg_samples_batch != None: # added by tgb team
                 perf_list = []
                 hits_list = []
+                batch_size_total = len(neg_samples_batch)
                 for query_id, query in enumerate(neg_samples_batch): # for each sample separately
                     pos = pos_samples_batch[query_id]
                     neg = torch.tensor(query).to(pos.device)
                     all =torch.cat((pos.unsqueeze(0), neg), dim=0)
                     score = self.decoder_ob.forward(embedding, r_emb, test_triplets[query_id].unsqueeze(0),
-                            samples_of_interest_emb=embedding[all] )
+                            samples_of_interest_emb=embedding[all], batch_size_total=batch_size_total )
+
                     # compute MRR
                     input_dict = {
                         "y_pred_pos": np.array([score[0,0].cpu()]),
@@ -364,7 +369,7 @@ class RecurrentRGCNREGCN(nn.Module):
                     hits_list.append(prediction_perf['hits@10'])
             else:
                 score = self.decoder_ob.forward(embedding, r_emb, all_triples, mode="test")
-            # score_rel = self.rdecoder.forward(embedding, r_emb, all_triples, mode="test")
+                score_rel = self.rdecoder.forward(embedding, r_emb, all_triples, mode="test")
             return score, perf_list, hits_list
         
     def get_mask_nonzero(self, static_embedding):
@@ -398,6 +403,9 @@ class RecurrentRGCNREGCN(nn.Module):
             scores_ob = self.decoder_ob.forward(pre_emb, r_emb, all_triples).view(-1, self.num_ents)
             loss_ent += self.loss_e(scores_ob, all_triples[:, 2])
      
+        if self.relation_prediction:
+            score_rel = self.rdecoder.forward(pre_emb, r_emb, all_triples, mode="train").view(-1, 2 * self.num_rels)
+            loss_rel += self.loss_r(score_rel, all_triples[:, 1])
 
         if self.use_static:
             if self.discount == 1:

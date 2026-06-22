@@ -269,12 +269,14 @@ def csv_to_wikidata(
         ),
         feat_l,
         node_ids,
+        edge_type_ids
     )
 
 
 def csv_to_staticdata(
     fname: str,
     node_ids: dict,
+    edge_type_ids: dict
 ) -> pd.DataFrame:
     r"""
     used by tkgl-wikidata and tkgl-smallpedia
@@ -283,13 +285,17 @@ def csv_to_staticdata(
     Args:
         fname: the path to the raw data
         node_ids: dictionary of node names mapped to integer node ids
+        edge_type_ids: dictionary of edge type names mapped to integer edge type ids
     """
     num_lines = sum(1 for line in open(fname)) - 1
     vprint(f"number of lines counted: {num_lines} in {fname}")
     u_list = np.zeros(num_lines)
     i_list = np.zeros(num_lines)
     edge_type = np.zeros(num_lines)
-    edge_type_ids = {}
+
+    num_static_edge_types = len(edge_type_ids)*2  # (to take into account inverse edge types as well)
+    num_new_edge_types = 0
+    # edge_type_ids = {}
     out_dict = {}
 
     with open(fname, "r") as csv_file:
@@ -309,7 +315,9 @@ def csv_to_staticdata(
                 if dst not in node_ids:
                     node_ids[dst] = len(node_ids)
                 if relation not in edge_type_ids:
-                    edge_type_ids[relation] = len(edge_type_ids)
+                    # edge_type_ids[relation] = len(edge_type_ids) # this is wrong. we need to account for inverse edge types as well
+                    edge_type_ids[relation] = num_static_edge_types + num_new_edge_types
+                    num_new_edge_types += 1
                 u = node_ids[src]
                 i = node_ids[dst]
                 u_list[idx - 1] = u
@@ -320,7 +328,7 @@ def csv_to_staticdata(
     out_dict["head"] = u_list
     out_dict["tail"] = i_list
     out_dict["edge_type"] = edge_type
-    return out_dict, node_ids
+    return out_dict, node_ids, edge_type_ids
 
 
 
