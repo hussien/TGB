@@ -88,6 +88,53 @@ You can install TGB via [pip](https://pypi.org/project/py-tgb/). **Requires pyth
 pip install py-tgb
 ```
 
+TGB uses [PyTorch](https://pytorch.org/) and [PyG](https://pyg.org/) at runtime, but **PyTorch is
+not installed automatically** — install the build that matches your platform/CUDA first (see the
+[PyTorch install guide](https://pytorch.org/get-started/locally/)). For example, a CPU build:
+```
+pip install torch          # CPU (macOS / no CUDA)
+# or a CUDA build, e.g.:  pip install torch --index-url https://download.pytorch.org/whl/cu121
+```
+
+### Development Install (uv, optional)
+
+For contributing to TGB, [uv](https://docs.astral.sh/uv/) provides a fast, reproducible
+environment. This is a **developer/CI convenience only — it does not change how the package is
+built or how `pip install py-tgb` behaves for users.**
+
+```
+# install uv: https://docs.astral.sh/uv/getting-started/installation/
+uv venv --python 3.11 && source .venv/bin/activate
+
+uv pip install -e .                     # builds via poetry-core, installs runtime deps
+uv pip install -r requirements-dev.txt  # pytest, mkdocs, ...
+
+# PyTorch is not pulled in automatically — install the build for your platform.
+uv pip install torch                    # CPU (macOS / no CUDA)
+# CUDA example: uv pip install torch==2.0.0 --index-url https://download.pytorch.org/whl/cu117
+uv pip install torch_geometric
+```
+
+### Testing
+
+TGB ships an offline-by-default `pytest` suite that guards dataset metadata (URLs/versions in
+`tgb/utils/info.py`), the download logic, and core utilities.
+
+```
+pip install -r requirements-dev.txt   # pytest, pytest-mock
+pip install -e .                       # runtime deps (torch-geometric, pandas, ...)
+pip install torch                      # torch is needed by most tests but is not
+                                       # a declared package dependency; install the
+                                       # build matching your platform/CUDA
+
+pytest -m "not network"     # fast, offline suite (default for CI)
+pytest --run-network        # also check that each dataset URL is reachable
+```
+
+Tests that import `tgb` model/utility code are skipped automatically if `torch` is not installed;
+the `tgb/utils/info.py` metadata and URL tests run with no heavy dependencies. See
+[`test/README.md`](test/README.md) for the full layout and the network-test opt-in.
+
 ### Links and Datasets
 
 The project website can be found [here](https://tgb.complexdatalab.com/).

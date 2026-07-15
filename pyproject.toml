@@ -26,3 +26,9 @@ poetry = "^1.5.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+markers = [
+    "network: test performs live network access (deselect with '-m \"not network\"'); opt in with --run-network or TGB_RUN_NETWORK=1",
+]
