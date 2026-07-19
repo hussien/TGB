@@ -4,12 +4,16 @@ import pickle
 import sys
 import argparse
 import json
-import torch
 from typing import Any
 import numpy as np
-from torch_geometric.data import TemporalData
 import pandas as pd
-import torch
+
+try:
+    import torch
+    from torch_geometric.data import TemporalData
+except ImportError:
+    torch = None
+    TemporalData = None
 
 
 _VERBOSE = os.getenv("TGB_VERBOSE", 'False').lower() in ['true', '1']
@@ -81,6 +85,8 @@ def add_inverse_quadruples_pyg(data: TemporalData, num_rels:int=-1) -> list:
     r"""
     creates an inverse quadruple from PyG TemporalData object, returns both the original and inverse quadruples
     """
+    if torch is None:
+        raise ImportError("torch and torch-geometric are required for add_inverse_quadruples_pyg")
     timestamp = data.t
     head = data.src
     tail = data.dst
@@ -98,7 +104,6 @@ def add_inverse_quadruples_pyg(data: TemporalData, num_rels:int=-1) -> list:
 
 
 
-# import torch
 def save_pkl(obj: Any, fname: str) -> None:
     r"""
     save a python object as a pickle file
@@ -122,11 +127,12 @@ def set_random_seed(random_seed: int):
     """
     random.seed(random_seed)
     np.random.seed(random_seed)
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+    if torch is not None:
+        torch.manual_seed(random_seed)
+        torch.cuda.manual_seed(random_seed)
+        torch.cuda.manual_seed_all(random_seed)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
     vprint(f'INFO: fixed random seed: {random_seed}')
 
 

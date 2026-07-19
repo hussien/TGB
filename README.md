@@ -88,6 +88,64 @@ You can install TGB via [pip](https://pypi.org/project/py-tgb/). **Requires pyth
 pip install py-tgb
 ```
 
+By default this is a **pure Python/numpy install — PyTorch and PyG are not required** and are not
+pulled in. This is enough for dataset loading (`LinkPropPredDataset`/`NodePropPredDataset`) and
+evaluation (`Evaluator`, `NegativeEdgeSampler`) with plain numpy arrays.
+
+If you want to use the PyG dataset wrappers (`PyGLinkPropPredDataset`/`PyGNodePropPredDataset`) or
+run the example model scripts, install the `torch` extra, which pulls in `torch-geometric`:
+```
+pip install py-tgb[torch]
+```
+`torch-geometric` doesn't pin a specific PyTorch build, so install the [PyTorch build matching your
+platform/CUDA](https://pytorch.org/get-started/locally/) first if you need a non-default one, e.g.:
+```
+pip install torch          # CPU (macOS / no CUDA)
+# or a CUDA build, e.g.:  pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install py-tgb[torch]
+```
+
+### Development Install (uv, optional)
+
+For contributing to TGB, [uv](https://docs.astral.sh/uv/) provides a fast, reproducible
+environment. This is a **developer/CI convenience only — it does not change how the package is
+built or how `pip install py-tgb` behaves for users.**
+
+```
+# install uv: https://docs.astral.sh/uv/getting-started/installation/
+uv venv --python 3.11 && source .venv/bin/activate
+
+uv pip install -e .                     # builds via poetry-core, installs runtime deps (pure numpy, no torch)
+uv pip install -r requirements-dev.txt  # pytest, mkdocs, ...
+
+# Only needed for the PyG dataset wrappers / example scripts:
+uv pip install torch                    # CPU (macOS / no CUDA)
+# CUDA example: uv pip install torch==2.0.0 --index-url https://download.pytorch.org/whl/cu117
+uv pip install -e ".[torch]"            # installs torch-geometric
+```
+
+### Testing
+
+TGB ships an offline-by-default `pytest` suite that guards dataset metadata (URLs/versions in
+`tgb/utils/info.py`), the download logic, and core utilities.
+
+```
+pip install -r requirements-dev.txt   # pytest, pytest-mock
+pip install -e .                       # runtime deps (pure numpy, no torch required)
+
+pytest -m "not network"     # fast, offline suite (default for CI)
+pytest --run-network        # also check that each dataset URL is reachable
+```
+
+Nearly all tests run with no torch installed at all — `tgb/utils/utils.py`,
+`Evaluator`, `NegativeEdgeSampler`, and the dataset classes all guard their torch imports and fall
+back to plain numpy behavior. `test/test_no_torch.py` simulates torch being uninstalled and asserts
+this directly, including that the PyG-only wrapper modules (which do require `pip install
+py-tgb[torch]`) still fail with a clear `ImportError` rather than silently misbehaving. Only a
+handful of tests that construct actual tensors (e.g. `test_eval_torch_matches_numpy`) skip when
+torch isn't installed. See [`test/README.md`](test/README.md) for the full layout and the
+network-test opt-in.
+
 ### Links and Datasets
 
 The project website can be found [here](https://tgb.complexdatalab.com/).
