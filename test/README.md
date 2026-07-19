@@ -25,6 +25,7 @@ TGB_RUN_NETWORK=1 pytest                 # same, via env var
 | `test_utils.py` | helpers in `tgb/utils/utils.py` | no |
 | `test_pre_process.py` | CSV loaders in `tgb/utils/pre_process.py` | no |
 | `test_negative_sampler.py` | `NegativeEdgeSampler` load/query behavior | no |
+| `test_no_torch.py` | simulates torch/torch_geometric being uninstalled; guards issue #127 | no |
 
 All dataset lists are derived from the dictionaries in `info.py`, so new datasets
 are covered automatically. Shared fixtures and the `--run-network` gate live in

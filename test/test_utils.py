@@ -5,9 +5,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# tgb.utils.utils imports torch at module top; skip cleanly if torch is absent.
-pytest.importorskip("torch")
-
 from tgb.utils.utils import (
     add_inverse_quadruples,
     find_nearest,

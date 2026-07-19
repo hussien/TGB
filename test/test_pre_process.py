@@ -7,9 +7,6 @@ id/offset logic can be checked exactly. No real dataset assets are needed.
 import numpy as np
 import pytest
 
-# pre_process imports torch transitively (tgb.utils.utils); skip cleanly if absent.
-pytest.importorskip("torch")
-
 from tgb.utils.pre_process import load_edgelist_trade, load_edgelist_wiki
 
 

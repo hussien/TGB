@@ -8,9 +8,6 @@ in-memory ``eval_set`` directly, so no real dataset is required.
 import numpy as np
 import pytest
 
-# negative_sampler / utils import torch at module top; skip cleanly if absent.
-pytest.importorskip("torch")
-
 from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
 from tgb.utils.utils import save_pkl
 

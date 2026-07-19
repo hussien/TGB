@@ -16,10 +16,6 @@ import os.path as osp
 
 import pytest
 
-# The dataset classes import torch transitively (tgb.utils.utils); skip this
-# module cleanly if torch is not installed rather than failing collection.
-pytest.importorskip("torch")
-
 from tgb.linkproppred.dataset import LinkPropPredDataset
 from tgb.nodeproppred.dataset import NodePropPredDataset
 

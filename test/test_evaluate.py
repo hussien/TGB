@@ -6,9 +6,6 @@ Uses small, hand-computed inputs so the metric values are exact.
 import numpy as np
 import pytest
 
-# Evaluator imports torch transitively (tgb.utils.utils); skip cleanly if absent.
-pytest.importorskip("torch")
-
 from tgb.linkproppred.evaluate import Evaluator
 
 # For pos score 1.0 against neg scores [0.5, 0.9, 2.0]:
