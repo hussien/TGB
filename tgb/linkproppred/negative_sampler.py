@@ -3,9 +3,14 @@ Sample negative edges for evaluation of dynamic link prediction
 Load already generated negative edges from file, batch them based on the positive edge, and return the evaluation set
 """
 
-import torch
-from torch import Tensor
 import numpy as np
+
+try:
+    import torch
+    from torch import Tensor
+except ImportError:
+    torch = None
+    Tensor = None
 from tgb.utils.utils import save_pkl, load_pkl
 from tgb.utils.info import PROJ_DIR
 import os

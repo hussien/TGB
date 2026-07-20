@@ -427,7 +427,9 @@ def load_edgelist_wiki(fname: str) -> pd.DataFrame:
     df = pd.read_csv(fname, skiprows=1, header=None)
     src = df.iloc[:, 0].values
     dst = df.iloc[:, 1].values
-    dst += int(src.max()) + 1
+    # non-in-place add: df.iloc[...].values can be a read-only view under
+    # pandas copy-on-write, which would make an in-place `dst +=` raise.
+    dst = dst + int(src.max()) + 1
     t = df.iloc[:, 2].values
     msg = df.iloc[:, 4:].values
     idx = np.arange(t.shape[0])
